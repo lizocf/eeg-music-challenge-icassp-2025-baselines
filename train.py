@@ -52,6 +52,7 @@ def parse():
     parser.add_argument('--input_width', type=int, default=1280)
     parser.add_argument('--input_height', type=int, default=32)
     parser.add_argument('--num_residual_blocks', type=int, default=2)
+    parser.add_argument('--in_linear', type=int, default=640)
     
     # Training options
     parser.add_argument('--batch_size', type=int, default=32)
