@@ -54,12 +54,22 @@ def interpolate(raw_data):
         
     return raw_data
 
+def artifact_removal(raw_data):
+    new_data = []
+    avg_data =  np.sum(raw_data, axis=0)
+    for i in range(len(raw_data)):
+        val = raw_data[i] - avg_data
+        new_data.append(val)
+    return new_data
+
 def open_and_interpolate(file):
-    # TODO: do some magic here <|:^)
+    # adding magic <|:^)
     raw_file = mne.io.read_raw_fif(file, preload=True)
+    # breakpoint()
     raw_data = raw_file.get_data()
     try:
         raw_data = interpolate(raw_data)
+        raw_data = artifact_removal(raw_data)
     except ResidualNan as e:
         print(f"Residual NaNs in {file}")
         return None
