@@ -39,7 +39,7 @@ class Model(nn.Module):
         # FC Layer
         # NOTE: This dimension will depend on the number of timestamps per sample in your data.
         # I have 1280 timepoints. 
-        self.fc1 = nn.Linear(1000, self.num_classes)
+        self.fc1 = nn.Linear(640, self.num_classes)
         
 
     def forward(self, x):

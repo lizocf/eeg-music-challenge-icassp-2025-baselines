@@ -55,6 +55,7 @@ def interpolate(raw_data):
     return raw_data
 
 def open_and_interpolate(file):
+    # TODO: do some magic here <|:^)
     raw_file = mne.io.read_raw_fif(file, preload=True)
     raw_data = raw_file.get_data()
     try:
