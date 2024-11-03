@@ -62,17 +62,50 @@ def artifact_removal(raw_data):
         new_data.append(val)
     return new_data
 
+FREQ_BANDS = {
+    "delta" : [0.5, 4.5],
+    "theta" : [4.5, 8.5],
+    "alpha" : [8.5, 11.5],
+    "sigma" : [11.5, 15.5],
+    "beta"  : [15.5, 30]
+}
+
+def eeg_power_band(raw_file, freq_bands=FREQ_BANDS):
+    """Calculate relative spectral analysis on each raw file"""
+    # breakpoint()
+    spectrum = raw_file.compute_psd(picks="eeg", fmin=0.5, fmax=30.0)
+    psds, freqs = spectrum.get_data(return_freqs=True)
+
+    # shape of psds: (num_channels, frequency_bins)
+    psds /= np.sum(psds, axis=-1, keepdims=True)
+
+    X = []
+    for fmin, fmax in freq_bands.values():
+        psds_band = psds[:, (freqs >= fmin) & (freqs < fmax)].mean(axis=-1)
+        X.append(psds_band.reshape(len(psds), -1))
+    
+    # end shape: (num_channels, num freq bands (5))
+    return np.concatenate(X, axis=1)
+    # return psds
+
 def open_and_interpolate(file):
     # adding magic <|:^)
     raw_file = mne.io.read_raw_fif(file, preload=True)
     # breakpoint()
+    # raw_file = raw_file.pick_channels(['Fp1', 'F3', 'F7', 'T7', 'O1', 'Fp2', 'F8', 'P8'])
+    # raw_file = raw_file.filter(4.0, 35.0, n_jobs=4)
+    # breakpoint()
     raw_data = raw_file.get_data()
     try:
         raw_data = interpolate(raw_data)
-        raw_data = artifact_removal(raw_data)
+        # raw_data = artifact_removal(raw_data)
+        # breakpoint()
+        # new_file = mne.io.RawArray(raw_data, raw_file.info) # convert back to raw to compute psd
+        # raw_data = eeg_power_band(new_file)
     except ResidualNan as e:
         print(f"Residual NaNs in {file}")
         return None
+    # breakpoint()
     return raw_data
 
 def get_stats(file_list):

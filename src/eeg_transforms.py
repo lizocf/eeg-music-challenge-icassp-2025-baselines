@@ -59,7 +59,6 @@ class RandomCrop(object):
 
         # Check eeg instance type
         is_eeg_numpy = isinstance(eeg, np.ndarray)
-
         d = eeg.shape[1] if is_eeg_numpy else eeg[:][0].shape[1]
         new_d = self.output_size
         if new_d>=d:
@@ -70,7 +69,7 @@ class RandomCrop(object):
 
         eeg = eeg[:, start:stop] if is_eeg_numpy else eeg.crop(tmin=eeg.times[start], tmax=eeg.times[stop],  include_tmax=False)
         
-        return {'eeg': eeg, 'label': label}
+        return {'eeg': eeg, 'label': label, 'song_features': sample['song_features']}
 
 class PickData(object):
     """Pick only EEG channels in raw data. Use this transform only if the eeg is contains all the channels (76)
@@ -84,7 +83,7 @@ class PickData(object):
         
         return {'eeg': eeg, 'label': label}
     
-class SetMontage(object):
+class SetMontage(object): # not called, will ignore
     """Set 10-20 montage to the Raw object. Use this transform only if the eeg is a mne.RawBase object.
     """
     
@@ -96,7 +95,7 @@ class SetMontage(object):
         
         return {'eeg': eeg, 'label': label}
     
-class ToArray(object):
+class ToArray(object):  # not called, will ignore
     """Convert the eeg file in a sample to numpy.ndarray."""
 
     def __call__(self, sample):
@@ -146,19 +145,20 @@ class ToTensor(object):
             self.label_interface = label_interface
 
     def __call__(self, sample):
-        eeg, label= sample['eeg'], sample['label']
+        eeg, label, song_features = sample['eeg'], sample['label'], sample['song_features']
         
         if self.eeg_tensor_type=='float32':
             eeg = eeg.astype(np.float32)
+            song_features = song_features.astype(np.float32)    # add spotify stuff
         eeg = torch.from_numpy(eeg)
             
         if self.label_interface=='tensor':
             label = torch.LongTensor([label])
         
         if self.interface=='dict':
-            return {'eeg': eeg, 'label': label}
+            return {'eeg': eeg, 'label': label, 'song_features': song_features}
         elif self.interface=='unpacked_values':
-            return eeg, label
+            return eeg, label, song_features
         
 class Standardize(object):
     """
@@ -166,10 +166,12 @@ class Standardize(object):
     """
     
     def __call__(self, sample):
-        eeg, label= sample['eeg'], sample['label']
+        eeg, label, song_features = sample['eeg'], sample['label'], sample['song_features']
         
         mean = eeg.mean(axis=1, keepdims=True)
         std = eeg.std(axis=1, keepdims=True)
         eeg = (eeg - mean) / std
+
+        song_features = (song_features - song_features.mean()) / song_features.std() # normalize song features also
         
-        return {'eeg': eeg, 'label': label}
+        return {'eeg': eeg, 'label': label, 'song_features': song_features}

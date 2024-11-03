@@ -35,9 +35,11 @@ class Trainer:
         
         batch['eeg'] = chunks
         batch['label'] = batch['label'].repeat(n_chunks)
+        breakpoint()
         
         return batch
         
+    
     def train(self, loaders):
 
         # Compute splits names
@@ -123,15 +125,18 @@ class Trainer:
                         # Get inputs and labels
                         inputs = batch['eeg']
                         labels = batch['label']
-                        
+                        song_features = batch['song_features'] # add song stuff
+
                         # Move to device
                         inputs = inputs.to(self.args.device)
                         labels = labels.to(self.args.device)
+                        song_features = song_features.to(self.args.device)
                         
                         #labels = labels.squeeze()
 
                         # Forward
-                        outputs = net(inputs)
+                        outputs = net(inputs, song_features)
+                        # outputs = net(inputs)
                         
                         # Check NaN
                         if torch.isnan(outputs).any():

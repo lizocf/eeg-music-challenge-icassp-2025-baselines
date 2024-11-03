@@ -39,10 +39,17 @@ class Model(nn.Module):
         # FC Layer
         # NOTE: This dimension will depend on the number of timestamps per sample in your data.
         # I have 1280 timepoints. 
-        self.fc1 = nn.Linear(640, self.num_classes)
-        
+        # self.fc1 = nn.Linear(640, self.num_classes)
+        self.fc1 = nn.Linear(640, 64)
 
-    def forward(self, x):
+        # Audio feature pathway
+        self.fc_audio1 = nn.Linear(11, 32)  # 11 audio features (danceability, energy, key, ...)
+        self.fc_audio2 = nn.Linear(32, 64)
+
+        self.fc_final = nn.Linear(704, self.num_classes) # adjust
+
+
+    def forward(self, x, song_features):
         if self.verbose: 
             print(f"[INPUT] {x.shape}")
         x = x.unsqueeze(1)
@@ -73,15 +80,28 @@ class Model(nn.Module):
         x = self.pooling3(x)
         if self.verbose:
             print(f"[CONV3] {x.shape}")
-        
+
         # FC Layer
         x = x.contiguous().view(x.shape[0], -1)
         if self.verbose:
             print(f"[VIEW] {x.shape}")
-        x = torch.sigmoid(self.fc1(x))
+        # x = torch.sigmoid(self.fc1(x))
+        x_eeg = F.elu(self.fc1(x))
         if self.verbose:
-            print(f"[FC1] {x.shape}")
-        return x
+            print(f"[FC1] {x_eeg.shape}")
+
+        # audio
+        print(song_features.shape)
+        x_audio = F.elu(self.fc_audio1(song_features))
+        x_audio = F.elu(self.fc_audio2(x_audio))
+        if self.verbose:
+            print(f"[FC2] {x_audio.shape}")
+        
+        # concatenate EEG and song features
+        x_concat = torch.cat((x, x_audio), dim=1)
+        out = self.fc_final(x_concat)
+
+        return out
 
 
 if __name__ == "__main__":
