@@ -49,9 +49,10 @@ def get_audio_features(track_id, max_retries=5):
                         'speechiness', 'acousticness', 'instrumentalness',
                         'liveness', 'valence', 'tempo']
                 audio_features = {key: features[key] for key in keys}
-                audio_features['track_id'] = track_id
+                # audio_features['track_id'] = track_id
 
                 # Append to DataFrame and save
+                # breakpoint()
                 audio_features_df.loc[track_id] = list(audio_features.values())
                 audio_features_df.to_csv(AUDIO_FEATURES_FILE)  # Save after each addition
                 return list(audio_features.values())  # Return the features as a list

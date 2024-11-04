@@ -16,7 +16,7 @@ class Model(nn.Module):
 
     def __init__(self,args):
         super(Model, self).__init__()
-        args_defaults=dict(num_channels=182, num_classes=10, verbose=False)
+        args_defaults=dict(num_channels=182, num_classes=4, verbose=False)
         for arg,default in args_defaults.items():
             setattr(self, arg, args[arg] if arg in args and args[arg] is not None else default)
     
@@ -91,7 +91,7 @@ class Model(nn.Module):
             print(f"[FC1] {x_eeg.shape}")
 
         # audio
-        print(song_features.shape)
+        # print(song_features.shape)
         x_audio = F.elu(self.fc_audio1(song_features))
         x_audio = F.elu(self.fc_audio2(x_audio))
         if self.verbose:

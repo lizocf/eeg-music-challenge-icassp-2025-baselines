@@ -35,7 +35,8 @@ class Trainer:
         
         batch['eeg'] = chunks
         batch['label'] = batch['label'].repeat(n_chunks)
-        breakpoint()
+        batch['song_features'] = batch['song_features'].repeat(n_chunks, 1)
+        # breakpoint()
         
         return batch
         
