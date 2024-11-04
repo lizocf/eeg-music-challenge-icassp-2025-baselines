@@ -312,12 +312,14 @@ class Trainer:
                 
                 # Get inputs and labels
                 inputs = batch['eeg']
+                song_features = batch['song_features']
                 
                 # Move to device
                 inputs = inputs.to(self.args.device)
+                song_features = song_features.to(self.args.device)
                 
                 # Forward
-                outputs = net(inputs)
+                outputs = net(inputs, song_features)
                 
                 # Check NaN
                 if torch.isnan(outputs).any():

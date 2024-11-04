@@ -76,6 +76,7 @@ def parse():
 def main(args):
 
     test_datasets, test_loaders, args = get_test_loader(args)
+    
 
     # Print dataset info
     for split in test_loaders:

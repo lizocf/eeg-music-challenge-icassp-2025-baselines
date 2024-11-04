@@ -185,7 +185,8 @@ def get_test_loader(args):
     if args.task == "subject_identification":
         splits = ["test_trial"]
     elif args.task == "emotion_recognition":
-        splits = ["test_trial", "test_subject"]
+        # splits = ["test_trial", "test_subject"]
+        splits = ["train", "val_trial", "val_subject"]
     else:
         raise ValueError(f"Task {args.task} not recognized")
     
