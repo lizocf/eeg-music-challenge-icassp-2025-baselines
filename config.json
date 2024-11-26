@@ -1,4 +1,4 @@
 {
-    "dataset_path": "YOUR_ABSOLUTE_PATH_TO_DATASET",
-    "wandb_entity": "YOUR_WANDB_ENTITY"
+    "dataset_path": "/home/lizocf/eeg-music-challenge-icassp-2025-baselines/",
+    "wandb_entity": "lizocf"
 }

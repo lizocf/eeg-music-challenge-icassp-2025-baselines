@@ -2,6 +2,11 @@ import mne
 import torch
 import warnings
 import numpy as np
+from src.timewarp import sparse_image_warp
+from torchvision.transforms.functional import to_pil_image, to_tensor
+import torchvision.transforms as T
+
+
 
 class FixedCrop(object):
     """Crop the EEG in a sample from a given start point.
@@ -70,7 +75,8 @@ class RandomCrop(object):
 
         eeg = eeg[:, start:stop] if is_eeg_numpy else eeg.crop(tmin=eeg.times[start], tmax=eeg.times[stop],  include_tmax=False)
         
-        return {'eeg': eeg, 'label': label}
+        return {'eeg': eeg, 'scalogram': sample['scalogram'], 'label': label, 
+                'spectrogram': sample['spectrogram'], 'song_features': sample['song_features']}
 
 class PickData(object):
     """Pick only EEG channels in raw data. Use this transform only if the eeg is contains all the channels (76)
@@ -156,7 +162,8 @@ class ToTensor(object):
             label = torch.LongTensor([label])
         
         if self.interface=='dict':
-            return {'eeg': eeg, 'label': label}
+            return {'eeg': eeg, 'label': label, 'scalogram': sample['scalogram'],  
+                    'spectrogram': sample['spectrogram'], 'song_features': sample['song_features']}
         elif self.interface=='unpacked_values':
             return eeg, label
         
@@ -166,10 +173,78 @@ class Standardize(object):
     """
     
     def __call__(self, sample):
-        eeg, label= sample['eeg'], sample['label']
+        eeg, label = sample['eeg'], sample['label']
         
         mean = eeg.mean(axis=1, keepdims=True)
         std = eeg.std(axis=1, keepdims=True)
         eeg = (eeg - mean) / std
         
-        return {'eeg': eeg, 'label': label}
+        return {'eeg': eeg, 'scalogram': sample['scalogram'], 'label': label,  
+                'spectrogram': sample['spectrogram'], 'song_features': sample['song_features']}
+
+
+def time_warp(spec, W=50):
+    num_rows = spec.shape[2]
+    spec_len = spec.shape[1]
+    device = spec.device
+
+    # adapted from https://github.com/DemisEom/SpecAugment/
+    pt = (num_rows - 2* W) * torch.rand([1], dtype=torch.float) + W # random point along the time axis
+    src_ctr_pt_freq = torch.arange(0, spec_len // 2)  # control points on freq-axis
+    src_ctr_pt_time = torch.ones_like(src_ctr_pt_freq) * pt  # control points on time-axis
+    src_ctr_pts = torch.stack((src_ctr_pt_freq, src_ctr_pt_time), dim=-1)
+    src_ctr_pts = src_ctr_pts.float().to(device)
+
+    # Destination
+    w = 2 * W * torch.rand([1], dtype=torch.float) - W# distance
+    dest_ctr_pt_freq = src_ctr_pt_freq
+    dest_ctr_pt_time = src_ctr_pt_time + w
+    dest_ctr_pts = torch.stack((dest_ctr_pt_freq, dest_ctr_pt_time), dim=-1)
+    dest_ctr_pts = dest_ctr_pts.float().to(device)
+
+    # warp
+    source_control_point_locations = torch.unsqueeze(src_ctr_pts, 0)  # (1, v//2, 2)
+    dest_control_point_locations = torch.unsqueeze(dest_ctr_pts, 0)  # (1, v//2, 2)
+    warped_spectro, dense_flows = sparse_image_warp(spec, source_control_point_locations, dest_control_point_locations)
+    return warped_spectro.squeeze(3)
+
+
+class ImageAugmentation(object):
+    def __init__(self, p=0.5):
+        assert isinstance(p, float)
+        if isinstance(p, float):
+            self.p = p
+
+    def __call__(self, sample):
+        scalogram, spectrogram, label = sample['scalogram'], sample['spectrogram'], sample['label']
+
+        breakpoint()
+        if np.random.rand() < self.p:
+            scalogram = scalogram.flip(-1)
+            spectrogram = spectrogram.flip(-1)
+        
+        return {'eeg': sample['eeg'], 'scalogram': scalogram, 'label': label, 'spectrogram': spectrogram}
+    
+    from torchvision.transforms.functional import to_pil_image, to_tensor
+
+# Define transformations for augmentation
+augmentations = T.Compose([
+    T.RandomHorizontalFlip(p=0.2),  # Flip 50% of the images horizontally
+    T.RandomVerticalFlip(p=0.2),    # Flip 50% of the images vertically
+    T.RandomRotation(degrees=10),   # Rotate within +/-15 degrees
+    T.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+    # T.RandomResizedCrop(size=(128, 128), scale=(0.8, 1.0)),  # Random crop and resize
+    T.GaussianBlur(kernel_size=3, sigma=(0.1, 2.0)),         # Apply Gaussian blur
+])
+
+def augment_images(batch):
+    augmented_batch = []
+    for img in batch:  # Iterate over batch
+        augmented_channels = []
+        for channel in img:  # Iterate over channels
+            pil_image = to_pil_image(channel)  # Convert tensor to PIL image
+            augmented_image = augmentations(pil_image)  # Apply augmentations
+            augmented_channels.append(to_tensor(augmented_image).squeeze(dim=0))  # Convert back to tensor
+        augmented_batch.append(torch.stack(augmented_channels))  # Stack channels
+
+    return torch.stack(augmented_batch)  # Stack batch
