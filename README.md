@@ -1,4 +1,8 @@
 <div align="center">
+LZL: TO RUN SCALOGRAM + SPECTROGRAM MODEL, RUN SSS_JOYA.PY
+</div>
+
+<div align="center">
 
 # Baselines for EEG-Music Emotion Recognition Grand Challenge at ICASSP 2025
 Salvatore Calcagno, Simone Carnemolla, Isaak Kavasidis, Simone Palazzo, Daniela Giordano, Concetto Spampinato
